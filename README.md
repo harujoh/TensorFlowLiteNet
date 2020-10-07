@@ -1,2 +1,2 @@
 # NTensorFlow
-NTensorFlow is a port from TensorFlow.js to C#
+NTensorFlow is a port from TensorFlow to C#
