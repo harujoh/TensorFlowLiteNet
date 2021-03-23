@@ -1,2 +1,2 @@
-# NTensorFlow
-NTensorFlow is a port from TensorFlow to C#
+# TensorFlowLiteNet
+TFLN allows to use TensorFlowLite from C#.
