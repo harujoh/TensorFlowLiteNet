@@ -77,7 +77,7 @@ namespace TensorFlowLiteNet.Sample
             VectorOffset subgraphsOffsetVector = Model.CreateSubgraphsVector(fbb, subgraphsOffset);
 
             //Description
-            StringOffset descriptionOffset = fbb.CreateString("MLIR Converted.");
+            StringOffset descriptionOffset = fbb.CreateString("Created from C#.");
 
             //buffers
             Offset<Buffer>[] buffersOffset = new Offset<Buffer>[4];
