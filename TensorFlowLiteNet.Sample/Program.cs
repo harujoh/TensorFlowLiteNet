@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text;
 using FlatBuffers;
 using tflite;
 using static TensorFlowLiteNet.NativeMethods;
@@ -79,13 +80,25 @@ namespace TensorFlowLiteNet.Sample
 
             //buffers
             Offset<Buffer>[] buffersOffset = new Offset<Buffer>[5];
+
             buffersOffset[0] = Buffer.CreateBuffer(fbb);
+
             buffersOffset[1] = Buffer.CreateBuffer(fbb);
-            VectorOffset dataOffset2Vector = Buffer.CreateDataVector(fbb, new byte[] { 0, 0, 0, 64, 0, 0, 192, 64, 0, 0, 224, 64 });
+
+            float[] addVal = { 2, 6, 7 };
+            byte[] addValByte = new byte[addVal.Length * sizeof(float)];
+            System.Buffer.BlockCopy(addVal, 0, addValByte, 0, addValByte.Length);
+            VectorOffset dataOffset2Vector = Buffer.CreateDataVector(fbb, addValByte);
             buffersOffset[2] = Buffer.CreateBuffer(fbb, dataOffset2Vector);
+
             buffersOffset[3] = Buffer.CreateBuffer(fbb);
-            VectorOffset dataOffset4Vector = Buffer.CreateDataVector(fbb, new byte[] { 49, 46, 53, 46, 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 });
+
+            byte[] runtimeVal = Encoding.ASCII.GetBytes("1.5.0");
+            byte[] runtimeValByte = new byte[15];
+            System.Buffer.BlockCopy(runtimeVal, 0, runtimeValByte, 0, runtimeVal.Length);
+            VectorOffset dataOffset4Vector = Buffer.CreateDataVector(fbb, runtimeValByte);
             buffersOffset[4] = Buffer.CreateBuffer(fbb, dataOffset4Vector);
+
             VectorOffset buffersOffsetVector = Model.CreateBuffersVector(fbb, buffersOffset);
 
             //MetaData
@@ -126,7 +139,7 @@ namespace TensorFlowLiteNet.Sample
             int[] inputDim = new int[TfLiteTensorNumDims(inputTensorPtr)];
             for (int i = 0; i < inputDim.Length; i++)
             {
-                inputDim[i]= TfLiteTensorDim(inputTensorPtr, i);
+                inputDim[i] = TfLiteTensorDim(inputTensorPtr, i);
             }
 
             //入力に適当な値を代入
@@ -161,7 +174,7 @@ namespace TensorFlowLiteNet.Sample
 
             TfLiteModelDelete(tfmodel);
             tfmodel = IntPtr.Zero;
-            
+
 
             Console.Read();
         }
