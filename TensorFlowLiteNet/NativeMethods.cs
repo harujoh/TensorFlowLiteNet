@@ -68,12 +68,17 @@ namespace TensorFlowLiteNet
         [DllImport("edgetpu.dll")]
         public static extern void edgetpu_verbosity(int verbosity);
 
+        public static string GetEdgeTPUVersion()
+        {
+            return Marshal.PtrToStringAnsi(edgetpu_version());
+        }
+
 
         [DllImport("tensorflowlite_c.dll")]
         public static extern IntPtr TfLiteVersion();
 
         [DllImport("tensorflowlite_c.dll")]
-        public static extern TfLiteInterpreter TfLiteModelCreate(IntPtr model_data, int model_size);
+        public static extern TfLiteInterpreter TfLiteModelCreate(byte[] model_data, int model_size);
 
         [DllImport("tensorflowlite_c.dll")]
         public static extern TfLiteInterpreter TfLiteModelDelete(TfLiteModel model);
@@ -133,12 +138,36 @@ namespace TensorFlowLiteNet
         public static extern QuantizationParams TfLiteTensorQuantizationParams(TfLiteTensor tensor);
 
         [DllImport("tensorflowlite_c.dll")]
-        public static extern int TfLiteTensorCopyFromBuffer(TfLiteTensor tensor, IntPtr input_data, int input_data_size);
+        static extern int TfLiteTensorCopyFromBuffer(TfLiteTensor tensor, IntPtr input_data, int input_data_size);
+
+        public static int TfLiteTensorCopyFromBuffer<T>(TfLiteTensor tensor, T[] input_data)
+        {
+            GCHandle tensorDataHandle = GCHandle.Alloc(input_data, GCHandleType.Pinned);
+            IntPtr tensorDataPtr = tensorDataHandle.AddrOfPinnedObject();
+
+            return TfLiteTensorCopyFromBuffer(tensor, tensorDataPtr, input_data.Length * Marshal.SizeOf<T>());
+        }
+
 
         [DllImport("tensorflowlite_c.dll")]
-        public static extern int TfLiteTensorCopyToBuffer(TfLiteTensor tensor, IntPtr output_data, int output_data_size);
+        static extern int TfLiteTensorCopyToBuffer(TfLiteTensor tensor, IntPtr output_data, int output_data_size);
+        
+        public static int TfLiteTensorCopyToBuffer<T>(TfLiteTensor tensor, T[] output_data)
+        {
+            GCHandle tensorDataHandle = GCHandle.Alloc(output_data, GCHandleType.Pinned);
+            IntPtr tensorDataPtr = tensorDataHandle.AddrOfPinnedObject();
+
+            return TfLiteTensorCopyToBuffer(tensor, tensorDataPtr, output_data.Length * Marshal.SizeOf<T>());
+        }
+
 
         [DllImport("tensorflowlite_c.dll")]
         public static extern void TfLiteInterpreterOptionsAddDelegate(TfLiteInterpreterOptions options, TfLiteDelegate delegate_);
+
+
+        public static string GetTFLiteVersion()
+        {
+            return Marshal.PtrToStringAnsi(TfLiteVersion());
+        }
     }
 }
