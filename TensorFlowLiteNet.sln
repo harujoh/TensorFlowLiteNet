@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31112.23
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TensorFlowLiteNet", "TensorFlowLiteNet\TensorFlowLiteNet.csproj", "{2AF30BA6-338D-4D24-9106-5088E4AD806D}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TensorFlowLiteNet.Sample", "TensorFlowLiteNet.Sample\TensorFlowLiteNet.Sample.csproj", "{C37C4E7E-7454-4A1F-A031-3582064CFB9D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TensorFlowLiteNet", "TensorFlowLiteNet\TensorFlowLiteNet.csproj", "{2AF30BA6-338D-4D24-9106-5088E4AD806D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
