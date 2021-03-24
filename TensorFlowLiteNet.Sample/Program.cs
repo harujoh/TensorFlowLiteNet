@@ -77,7 +77,7 @@ namespace TensorFlowLiteNet.Sample
             VectorOffset subgraphsOffsetVector = Model.CreateSubgraphsVector(fbb, subgraphsOffset);
 
             //Description
-            StringOffset descriptionOffset = fbb.CreateString("Created from C#.");
+            StringOffset descriptionOffset = fbb.CreateString("Created by C#.");
 
             //buffers
             Offset<Buffer>[] buffersOffset = new Offset<Buffer>[4];
