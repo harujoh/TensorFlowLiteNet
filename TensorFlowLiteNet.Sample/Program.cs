@@ -25,17 +25,17 @@ namespace TensorFlowLiteNet.Sample
             VectorOffset shapeOffset1Vector = Tensor.CreateShapeVector(fbb, new[] { 1, 64, 64, 3 });
             StringOffset nameOffset1 = fbb.CreateString("img");
             Offset<QuantizationParameters> quantizationOffset1Vector = QuantizationParameters.CreateQuantizationParameters(fbb, default, default, default, default, QuantizationDetails.NONE, 0, 0);
-            tensorsOffset[0] = Tensor.CreateTensor(fbb, shapeOffset1Vector, TensorType.FLOAT32, 0, nameOffset1, quantizationOffset1Vector, false);
+            tensorsOffset[0] = Tensor.CreateTensor(fbb, shapeOffset1Vector, TensorType.FLOAT32, 1, nameOffset1, quantizationOffset1Vector, false);
 
             VectorOffset shapeOffset2Vector = Tensor.CreateShapeVector(fbb, new[] { 3 });
             StringOffset nameOffset2 = fbb.CreateString("add");
             Offset<QuantizationParameters> quantizationOffset2Vector = QuantizationParameters.CreateQuantizationParameters(fbb, default, default, default, default, QuantizationDetails.NONE, 0, 0);
-            tensorsOffset[1] = Tensor.CreateTensor(fbb, shapeOffset2Vector, TensorType.FLOAT32, 1, nameOffset2, quantizationOffset2Vector, false);
+            tensorsOffset[1] = Tensor.CreateTensor(fbb, shapeOffset2Vector, TensorType.FLOAT32, 2, nameOffset2, quantizationOffset2Vector, false);
 
             VectorOffset shapeOffset3Vector = Tensor.CreateShapeVector(fbb, new[] { 1, 64, 64, 3 });
             StringOffset nameOffset3 = fbb.CreateString("out");
             Offset<QuantizationParameters> quantizationOffset3Vector = QuantizationParameters.CreateQuantizationParameters(fbb, default, default, default, default, QuantizationDetails.NONE, 0, 0);
-            tensorsOffset[2] = Tensor.CreateTensor(fbb, shapeOffset3Vector, TensorType.FLOAT32, 2, nameOffset3, quantizationOffset3Vector, false);
+            tensorsOffset[2] = Tensor.CreateTensor(fbb, shapeOffset3Vector, TensorType.FLOAT32, 3, nameOffset3, quantizationOffset3Vector, false);
 
             VectorOffset tensorsOffsetVector = SubGraph.CreateTensorsVector(fbb, tensorsOffset);
 
@@ -80,30 +80,32 @@ namespace TensorFlowLiteNet.Sample
             StringOffset descriptionOffset = fbb.CreateString("Created by C#.");
 
             //buffers
-            Offset<Buffer>[] buffersOffset = new Offset<Buffer>[4];
+            Offset<Buffer>[] buffersOffset = new Offset<Buffer>[5];
 
             buffersOffset[0] = Buffer.CreateBuffer(fbb); //img
+
+            buffersOffset[1] = Buffer.CreateBuffer(fbb); //img
 
             float[] addVal = { 2, 6, 7 };
             byte[] addValByte = new byte[addVal.Length * sizeof(float)];
             System.Buffer.BlockCopy(addVal, 0, addValByte, 0, addValByte.Length);
             VectorOffset dataOffset2Vector = Buffer.CreateDataVector(fbb, addValByte);
-            buffersOffset[1] = Buffer.CreateBuffer(fbb, dataOffset2Vector); //add
+            buffersOffset[2] = Buffer.CreateBuffer(fbb, dataOffset2Vector); //add
 
-            buffersOffset[2] = Buffer.CreateBuffer(fbb); //out
+            buffersOffset[3] = Buffer.CreateBuffer(fbb); //out
 
             byte[] runtimeVal = Encoding.ASCII.GetBytes("1.5.0");
             byte[] runtimeValByte = new byte[15];
             System.Buffer.BlockCopy(runtimeVal, 0, runtimeValByte, 0, runtimeVal.Length);
             VectorOffset dataOffset4Vector = Buffer.CreateDataVector(fbb, runtimeValByte);
-            buffersOffset[3] = Buffer.CreateBuffer(fbb, dataOffset4Vector); //metadata
+            buffersOffset[4] = Buffer.CreateBuffer(fbb, dataOffset4Vector); //metadata
 
             VectorOffset buffersOffsetVector = Model.CreateBuffersVector(fbb, buffersOffset);
 
             //MetaData
             Offset<Metadata>[] metadata = new Offset<Metadata>[1];
             StringOffset name = fbb.CreateString("min_runtime_version");
-            metadata[0] = Metadata.CreateMetadata(fbb, name, 3);
+            metadata[0] = Metadata.CreateMetadata(fbb, name, 4);
             VectorOffset metaDataoffset = Model.CreateMetadataVector(fbb, metadata);
 
             //signature_defs
