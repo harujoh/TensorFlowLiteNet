@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -9,8 +10,6 @@ namespace TensorFlowLiteNet
     public struct NdArray<T>
     {
         public T[] Data;
-
-        //このNdArrayの各次元のサイズ
         public int[] Shape;
 
         public int Length => this.Data.Length;
@@ -25,7 +24,7 @@ namespace TensorFlowLiteNet
                 this.Shape[i] = array.GetLength(i);
             }
 
-            Buffer.BlockCopy(array, 0, this.Data, 0, this.Data.Length * Marshal.SizeOf<T>());
+            Buffer.BlockCopy(array, 0, this.Data, 0, this.Data.Length * Unsafe.SizeOf<T>());
         }
 
         public NdArray(params int[] shape)
@@ -34,6 +33,17 @@ namespace TensorFlowLiteNet
             this.Shape = new int[shape.Length];
 
             Buffer.BlockCopy(shape, 0, this.Shape, 0, this.Shape.Length * sizeof(int));
+        }
+
+        public NdArray(T[] data, int[] shape)
+        {
+#if DEBUG
+            if (data.Length != NdArray.ShapeToLength(shape)) throw new Exception("指定された配列とシェイプが一致していません");
+#endif
+            this.Data = new T[data.Length];
+            Buffer.BlockCopy(data, 0, this.Data, 0, Unsafe.SizeOf<T>() * data.Length);
+            this.Shape = new int[shape.Length];
+            Buffer.BlockCopy(shape, 0, this.Shape, 0, sizeof(int) * shape.Length);
         }
 
         //インデクサはあまり早くないので頻繁にアクセスする場合は使用をオススメしません。デバッグ用途向けと割り切ってください。
