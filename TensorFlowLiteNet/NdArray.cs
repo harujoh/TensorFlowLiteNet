@@ -20,12 +20,12 @@ namespace TensorFlowLiteNet
             this.Shape = new int[array.Rank];
             this.Data = new T[array.Length];
 
-            for (int i = 0; i < Shape.Length; i++)
+            for (int i = 0; i < this.Shape.Length; i++)
             {
                 this.Shape[i] = array.GetLength(i);
             }
 
-            Buffer.BlockCopy(array, 0, Data, 0, Data.Length * Marshal.SizeOf<T>());
+            Buffer.BlockCopy(array, 0, this.Data, 0, this.Data.Length * Marshal.SizeOf<T>());
         }
 
         public NdArray(params int[] shape)
@@ -33,20 +33,14 @@ namespace TensorFlowLiteNet
             this.Data = new T[NdArray.ShapeToLength(shape)];
             this.Shape = new int[shape.Length];
 
-            Buffer.BlockCopy(shape, 0, Shape, 0, Shape.Length * sizeof(int));
+            Buffer.BlockCopy(shape, 0, this.Shape, 0, this.Shape.Length * sizeof(int));
         }
 
         //インデクサはあまり早くないので頻繁にアクセスする場合は使用をオススメしません。デバッグ用途向けと割り切ってください。
         public T this[params int[] indices]
         {
-            get
-            {
-                return this.Data[NdArray.GetLocalIndex(Shape, indices)];
-            }
-            set
-            {
-                this.Data[NdArray.GetLocalIndex(Shape, indices)] = value;
-            }
+            get => this.Data[NdArray.GetLocalIndex(this.Shape, indices)];
+            set => this.Data[NdArray.GetLocalIndex(this.Shape, indices)] = value;
         }
 
         public override string ToString()
@@ -56,13 +50,13 @@ namespace TensorFlowLiteNet
 
         string ShapeString()
         {
-            return "[" + string.Join(",", Shape) + "]";
+            return "[" + string.Join(",", this.Shape) + "]";
         }
     }
 
     static class NdArray
     {
-        public static int GetLocalIndex(int[] Shape, params int[] indices)
+        public static int GetLocalIndex(int[] shape, params int[] indices)
         {
             int result = 0;
             int rankOffset = 1;
@@ -70,7 +64,7 @@ namespace TensorFlowLiteNet
             for (int i = indices.Length - 1; i >= 0; i--)
             {
                 result += indices[i] * rankOffset;
-                rankOffset *= Shape[i];
+                rankOffset *= shape[i];
             }
 
             return result;
@@ -88,15 +82,14 @@ namespace TensorFlowLiteNet
             return result;
         }
 
-        public static string ToString<T>(T[] datas, int[] shape)
+        public static string ToString<T>(T[] arrayData, int[] shape)
         {
 #if DEBUG
-            if (shape.Length == 0 && datas.Length != 1) throw new Exception();
+            if (shape.Length == 0) throw new Exception();
 #endif
-            //単品データ
-            if (shape.Length == 0 && datas.Length == 1)
+            if (arrayData.Length < 2)
             {
-                return datas[0].ToString();
+                return arrayData[0].ToString();
             }
 
             StringBuilder sb = new StringBuilder();
@@ -105,9 +98,9 @@ namespace TensorFlowLiteNet
             int realMaxLength = 0; //小数点以下の最大値
             bool isExponential = false; //指数表現にするか
 
-            foreach (T data in datas)
+            foreach (T data in arrayData)
             {
-                string[] divStr = data.ToString().Split('.');
+                string[] divStr = data.ToString()?.Split('.') ?? new[] { "" };
                 intMaxLength = (int)Math.Max(intMaxLength, divStr[0].Length);
 
                 if (divStr.Length > 1)
@@ -144,16 +137,16 @@ namespace TensorFlowLiteNet
             }
 
             int closer = 0;
-            for (int i = 0; i < datas.Length; i++)
+            for (int i = 0; i < arrayData.Length; i++)
             {
                 string[] divStr;
                 if (isExponential)
                 {
-                    divStr = string.Format("{0:0.00000000e+00}", datas[i]).Split('.');
+                    divStr = string.Format("{0:0.00000000e+00}", arrayData[i]).Split('.');
                 }
                 else
                 {
-                    divStr = datas[i].ToString().Split('.');
+                    divStr = arrayData[i].ToString()?.Split('.') ?? new[] { "" };
                 }
 
                 //最大文字数でインデントを揃える
@@ -161,11 +154,14 @@ namespace TensorFlowLiteNet
                 {
                     sb.Append(" ");
                 }
+
                 sb.Append(divStr[0]);
+
                 if (realMaxLength != 0)
                 {
                     sb.Append(".");
                 }
+
                 if (divStr.Length == 2)
                 {
                     sb.Append(divStr[1].Length > 8 && !isExponential ? divStr[1].Substring(0, 8) : divStr[1]);
@@ -183,7 +179,7 @@ namespace TensorFlowLiteNet
                 }
 
                 //約数を調査してピッタリなら括弧を出力
-                if (i != datas.Length - 1)
+                if (i != arrayData.Length - 1)
                 {
                     foreach (int commonDivisor in commonDivisorList)
                     {

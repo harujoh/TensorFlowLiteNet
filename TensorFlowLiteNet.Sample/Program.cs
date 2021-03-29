@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using FlatBuffers;
@@ -125,9 +126,18 @@ namespace TensorFlowLiteNet.Sample
             //Model.AddSignatureDefs(fbb,signatureDefsOffset);
             Model.FinishModelBuffer(fbb, model);
 
-
             //出来上がったtfliteをTensorFlowへ転送
             byte[] modelData = fbb.SizedByteArray();
+
+            //保存
+            //using (FileStream fs = new FileStream("test.tflite", FileMode.Create))
+            //{
+            //    using (BinaryWriter bw = new BinaryWriter(fs))
+            //    {
+            //        bw.Write(modelData);
+            //    }
+            //}
+
             IntPtr tfmodel = TfLiteModelCreate(modelData, modelData.Length);
 
             IntPtr interpreter = TfLiteInterpreterCreate(tfmodel, IntPtr.Zero);
