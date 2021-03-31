@@ -72,11 +72,11 @@ namespace TensorFlowLiteNet
             Buffer.BlockCopy(data, 0, this.Data, 0, this.Data.Length * Unsafe.SizeOf<T>());
         }
 
-        public static ModelBuilder<T> operator +(Variable<T> a, Array b)
+        public static Graph<T> operator +(Variable<T> a, Array b)
         {
-            ModelBuilder<T> modelBuilder = new ModelBuilder<T>();
-            modelBuilder.AddPlusConstOperator(a, b);
-            return modelBuilder;
+            Graph<T> graph = new Graph<T>();
+            graph.AddPlusConstOperator(a, b);
+            return graph;
         }
 
         string ShapeString()

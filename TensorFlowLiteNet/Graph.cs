@@ -6,7 +6,7 @@ using static TensorFlowLiteNet.NativeMethods;
 
 namespace TensorFlowLiteNet
 {
-    public class ModelBuilder<T>
+    public class Graph<T>
     {
         Schema.Model schemaModel = new Schema.Model();
 
