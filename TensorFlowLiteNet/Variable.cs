@@ -1,20 +1,20 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace TensorFlowLiteNet
 {
     [DebuggerDisplay("{\"NdArray\" + ShapeString()}", Type = "{\"NdArray\" + ShapeString()}")]
-    public struct NdArray<T>
+    public class Variable<T>
     {
         public T[] Data;
         public int[] Shape;
+        public string Name;
 
         public int Length => this.Data.Length;
 
-        public NdArray(Array array)
+        public Variable(Array array, string name = "")
         {
             this.Shape = new int[array.Rank];
             this.Data = new T[array.Length];
@@ -25,17 +25,21 @@ namespace TensorFlowLiteNet
             }
 
             Buffer.BlockCopy(array, 0, this.Data, 0, this.Data.Length * Unsafe.SizeOf<T>());
+
+            this.Name = name;
         }
 
-        public NdArray(params int[] shape)
+        public Variable(params int[] shape)
         {
             this.Data = new T[NdArray.ShapeToLength(shape)];
             this.Shape = new int[shape.Length];
 
             Buffer.BlockCopy(shape, 0, this.Shape, 0, this.Shape.Length * sizeof(int));
+
+            this.Name = "";
         }
 
-        public NdArray(T[] data, int[] shape)
+        public Variable(T[] data, int[] shape, string name = "")
         {
 #if DEBUG
             if (data.Length != NdArray.ShapeToLength(shape)) throw new Exception("指定された配列とシェイプが一致していません");
@@ -44,28 +48,117 @@ namespace TensorFlowLiteNet
             Buffer.BlockCopy(data, 0, this.Data, 0, Unsafe.SizeOf<T>() * data.Length);
             this.Shape = new int[shape.Length];
             Buffer.BlockCopy(shape, 0, this.Shape, 0, sizeof(int) * shape.Length);
+
+            this.Name = name;
         }
 
-        //インデクサはあまり早くないので頻繁にアクセスする場合は使用をオススメしません。デバッグ用途向けと割り切ってください。
+        //インデクサはあまり早くないので頻繁にアクセスする場合は使用をオススメしません。
+        //デバッグ用途か結果のプレビュー向けと割り切ってください。
         public T this[params int[] indices]
         {
             get => this.Data[NdArray.GetLocalIndex(this.Shape, indices)];
             set => this.Data[NdArray.GetLocalIndex(this.Shape, indices)] = value;
         }
 
-        public override string ToString()
+        public byte[] GetBytes()
         {
-            return NdArray.ToString(this.Data, this.Shape);
+            byte[] result = new byte[this.Data.Length * Unsafe.SizeOf<T>()];
+            Buffer.BlockCopy(this.Data, 0, result, 0, result.Length);
+            return result;
+        }
+
+        public void SetVal(Array data)
+        {
+            Buffer.BlockCopy(data, 0, this.Data, 0, this.Data.Length * Unsafe.SizeOf<T>());
+        }
+
+        public static ModelBuilder<T> operator +(Variable<T> a, Array b)
+        {
+            ModelBuilder<T> modelBuilder = new ModelBuilder<T>();
+            modelBuilder.AddPlusConstOperator(a, b);
+            return modelBuilder;
         }
 
         string ShapeString()
         {
             return "[" + string.Join(",", this.Shape) + "]";
         }
+
+        public override string ToString()
+        {
+            return NdArray.ToString(this.Data, this.Shape);
+        }
     }
 
-    static class NdArray
+    public static class NdArray
     {
+        public static int[] Broadcast(int[] source, int[] target)
+        {
+            int[] resultShape;
+
+            if (source.Length > target.Length)
+            {
+                //入力の方が大きい
+                resultShape = new int[source.Length];//val.ToArray();
+                int offset = source.Length - target.Length;
+
+                Buffer.BlockCopy(source, 0, resultShape, 0, offset * sizeof(int));
+                for (int i = offset; i < resultShape.Length; i++)
+                {
+                    resultShape[i] = source[i];
+
+                    if (resultShape[i] == 1)
+                    {
+                        resultShape[i] = target[i - offset];
+                    }
+#if DEBUG
+                    else if (target[i - offset] != 1 && resultShape[i] != target[i - offset])
+                    {
+                        throw new Exception("変換不可能な組み合わせです");
+                    }
+#endif
+                }
+            }
+            else
+            {
+                //指定の方が大きい
+                resultShape = new int[target.Length];//Shape.ToArray();
+                int offset = target.Length - source.Length;
+
+                Buffer.BlockCopy(target, 0, resultShape, 0, offset * sizeof(int));
+                for (int i = offset; i < resultShape.Length; i++)
+                {
+                    resultShape[i] = target[i];
+
+                    if (resultShape[i] == 1)
+                    {
+                        resultShape[i] = source[i - offset];
+                    }
+#if DEBUG
+                    else if (source[i - offset] != 1 && resultShape[i] != source[i - offset])
+                    {
+                        throw new Exception("変換不可能な組み合わせです");
+                    }
+#endif
+                }
+            }
+
+            return resultShape;
+        }
+
+        public static int[] GetDimensionsIndex(int[] shape, int index)
+        {
+            int[] dimensionsIndex = new int[shape.Length];
+
+            for (int i = shape.Length - 1; i >= 0; i--)
+            {
+                dimensionsIndex[i] = index % shape[i];
+                index /= shape[i];
+            }
+
+            return dimensionsIndex;
+        }
+
         public static int GetLocalIndex(int[] shape, params int[] indices)
         {
             int result = 0;
