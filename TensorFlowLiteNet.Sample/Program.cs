@@ -9,9 +9,10 @@ namespace TensorFlowLiteNet.Sample
         {
             Variable<float> inputVar = new Variable<float>(1, 64, 64, 3);
             float[] inputConst = { 2.0f, 6.0f, 7.0f };
+            float[] inputConst2 = { 1.0f, 1.0f, 1.0f };
 
             //計算グラフを定義
-            var graph = inputVar + inputConst;
+            var graph = inputVar + inputConst + inputConst2;
 
             //値を転送
             inputVar.SetVal(Enumerable.Range(0, inputVar.Length).Select(n => (float)n).ToArray());

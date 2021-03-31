@@ -74,9 +74,7 @@ namespace TensorFlowLiteNet
 
         public static Graph<T> operator +(Variable<T> a, Array b)
         {
-            Graph<T> graph = new Graph<T>();
-            graph.AddPlusConstOperator(a, b);
-            return graph;
+            return new Graph<T>(a) + b;
         }
 
         string ShapeString()

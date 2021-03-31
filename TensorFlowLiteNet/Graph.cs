@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using tflite;
 using static TensorFlowLiteNet.NativeMethods;
 
@@ -16,14 +17,37 @@ namespace TensorFlowLiteNet
         private Dictionary<BuiltinOperator, uint> OperatorDict = new Dictionary<BuiltinOperator, uint>();
 
         private Variable<T>[] inputArrays;
+        private Variable<T>[] outputArrays;
 
         private int[] InputsTensorIndex = null;
         private int[] OutputsTensorIndex = null;
 
-        public void AddPlusConstOperator(Variable<T> inputVar, Array input)
+        TensorType GetTensorType()
+        {
+            if (typeof(T) == typeof(int)) return TensorType.INT32;
+            if (typeof(T) == typeof(long)) return TensorType.INT64;
+            if (typeof(T) == typeof(float)) return TensorType.FLOAT32;
+            if (typeof(T) == typeof(double)) return TensorType.FLOAT64;
+            throw new Exception("サポートされていない型です");
+        }
+
+        public Graph(Variable<T> inputVar)
+        {
+            TensorType tensorType = GetTensorType();
+
+            InputsTensorIndex = new[] { 0 };//PlusConstは右辺が定数なので左辺のみ
+            inputArrays = new[] { inputVar };
+
+            tensorsOffset.Add(new Schema.Tensor(inputVar.Shape, tensorType, (uint)schemaModel.Buffers.Count, schemaModel.Buffers.Count + ":" + inputVar.Name));
+            schemaModel.Buffers.Add(new Schema.Buffer());
+
+            outputArrays = new[] { new Variable<T>(inputVar.Shape) };
+            OutputsTensorIndex = new[] { 0 };//特に計算は行わないので自分自身を返す
+        }
+
+        private void AddPlusConstOperator(Array input)
         {
             List<int> inputs = new List<int>();
-            List<int> outputs = new List<int>();
 
             if (!OperatorDict.ContainsKey(BuiltinOperator.ADD))
             {
@@ -31,50 +55,39 @@ namespace TensorFlowLiteNet
                 schemaModel.OperatorCodes.Add(new Schema.OperatorCode(0, version: 1, builtin_code: BuiltinOperator.ADD));
             }
 
-            TensorType tensorType = TensorType.INT32;
-            if (typeof(T) == typeof(int)) tensorType = TensorType.INT32;
-            if (typeof(T) == typeof(long)) tensorType = TensorType.INT64;
-            if (typeof(T) == typeof(float)) tensorType = TensorType.FLOAT32;
-            if (typeof(T) == typeof(double)) tensorType = TensorType.FLOAT64;
+            TensorType tensorType = GetTensorType();
 
-            if (InputsTensorIndex == null) {
-                InputsTensorIndex = new[] { 0 };//PlusConstは右辺が定数なので左辺のみ
-                inputArrays = new[] { inputVar };
-            }
+            //前の出力を入力に
+            inputs.AddRange(OutputsTensorIndex.ToArray());
 
-
-            //img
-            inputs.Add(tensorsOffset.Count);
-            tensorsOffset.Add(new Schema.Tensor(inputVar.Shape, tensorType, (uint)schemaModel.Buffers.Count, schemaModel.Buffers.Count + ":" + inputVar.Name));//Tensorに追加時はbufferのIndex
-            schemaModel.Buffers.Add(new Schema.Buffer());
-
-            //add
             Variable<T> inputConst = new Variable<T>(input);
 
             inputs.Add(tensorsOffset.Count);
-            tensorsOffset.Add(new Schema.Tensor(inputConst.Shape, tensorType, (uint)schemaModel.Buffers.Count, schemaModel.Buffers.Count + ":" + inputConst.Name));
+            tensorsOffset.Add(new Schema.Tensor(inputConst.Shape, tensorType, (uint)schemaModel.Buffers.Count, schemaModel.Buffers.Count + ":" + inputConst.Name));//Tensorに追加時はbufferのIndex
             schemaModel.Buffers.Add(new Schema.Buffer(inputConst.GetBytes()));
 
-            int[] result = inputVar.Shape;
-            if (inputVar.Length != inputConst.Length)
+            int[] result = outputArrays[0].Shape;//outputArraysが入力になるので
+            if (outputArrays[0].Length != inputConst.Length)
             {
-                result = inputVar.Length < inputConst.Length?
-                    NdArray.Broadcast(inputVar.Shape, inputConst.Shape):
-                    NdArray.Broadcast(inputConst.Shape, inputVar.Shape);
+                result = outputArrays[0].Length < inputConst.Length ?
+                    NdArray.Broadcast(outputArrays[0].Shape, inputConst.Shape) :
+                    NdArray.Broadcast(inputConst.Shape, outputArrays[0].Shape);
             }
 
-            //out
-            outputs.Add(tensorsOffset.Count);
+            //計算グラフの出力シェイプを更新
+            outputArrays = new[] { new Variable<T>(result) };
+
+            int[] outputs = { tensorsOffset.Count };
             tensorsOffset.Add(new Schema.Tensor(result, tensorType, (uint)schemaModel.Buffers.Count, schemaModel.Buffers.Count + ":" + "out"));
             schemaModel.Buffers.Add(new Schema.Buffer());
 
-            OutputsTensorIndex = outputs.ToArray();
+            OutputsTensorIndex = outputs;
 
             //事前に用意しないとエラーが出る
             Schema.AddOptions builtinOption = new Schema.AddOptions(ActivationFunctionType.NONE, true);
 
             //opの追加時はTensorのIndex
-            operatorsOffset.Add(new Schema.Operator(OperatorDict[BuiltinOperator.ADD], inputs.ToArray(), outputs.ToArray(), BuiltinOptions.AddOptions, builtinOption));
+            operatorsOffset.Add(new Schema.Operator(OperatorDict[BuiltinOperator.ADD], inputs.ToArray(), outputs, BuiltinOptions.AddOptions, builtinOption));
         }
 
         public void Save(string path)
@@ -107,6 +120,7 @@ namespace TensorFlowLiteNet
 
             //モデルから入力のサイズを取得し作成
             int inputCount = TfLiteInterpreterGetInputTensorCount(interpreter);
+
             for (int i = 0; i < inputCount; i++)
             {
 #if DEBUG
@@ -153,6 +167,12 @@ namespace TensorFlowLiteNet
             tfmodel = IntPtr.Zero;
 
             return outputArrays;
+        }
+
+        public static Graph<T> operator +(Graph<T> a, Array b)
+        {
+            a.AddPlusConstOperator(b);
+            return a;
         }
     }
 }
