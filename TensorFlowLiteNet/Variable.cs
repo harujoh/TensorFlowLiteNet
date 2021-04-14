@@ -77,6 +77,21 @@ namespace TensorFlowLiteNet
             return new Graph<T>(a) + b;
         }
 
+        public static Graph<T> operator -(Variable<T> a, Array b)
+        {
+            return new Graph<T>(a) - b;
+        }
+
+        public static Graph<T> operator *(Variable<T> a, Array b)
+        {
+            return new Graph<T>(a) * b;
+        }
+
+        public static Graph<T> operator /(Variable<T> a, Array b)
+        {
+            return new Graph<T>(a) / b;
+        }
+
         string ShapeString()
         {
             return "[" + string.Join(",", this.Shape) + "]";

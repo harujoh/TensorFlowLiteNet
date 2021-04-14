@@ -200,13 +200,15 @@ namespace Schema
         }
     }
 
-    interface IBuiltInOptions
+    interface IBuiltinOptions
     {
+        BuiltinOptions Type { get; }
         int GetValue(FlatBufferBuilder fbb);
     }
 
-    class AddOptions: IBuiltInOptions
+    class AddOptions: IBuiltinOptions
     {
+        public BuiltinOptions Type => BuiltinOptions.AddOptions;
         public ActivationFunctionType FusedActivationFunction;
         public bool PotScaleInt16;
 
@@ -219,6 +221,56 @@ namespace Schema
         public int GetValue(FlatBufferBuilder fbb)
         {
             return tflite.AddOptions.CreateAddOptions(fbb, this.FusedActivationFunction, this.PotScaleInt16).Value;
+        }
+    }
+
+    class SubOptions : IBuiltinOptions
+    {
+        public BuiltinOptions Type => BuiltinOptions.SubOptions;
+        public ActivationFunctionType FusedActivationFunction;
+        public bool PotScaleInt16;
+
+        public SubOptions(ActivationFunctionType fused_activation_function = ActivationFunctionType.NONE, bool pot_scale_int16 = true)
+        {
+            this.FusedActivationFunction = fused_activation_function;
+            this.PotScaleInt16 = pot_scale_int16;
+        }
+
+        public int GetValue(FlatBufferBuilder fbb)
+        {
+            return tflite.SubOptions.CreateSubOptions(fbb, this.FusedActivationFunction, this.PotScaleInt16).Value;
+        }
+    }
+
+    class MulOptions : IBuiltinOptions
+    {
+        public BuiltinOptions Type => BuiltinOptions.MulOptions;
+        public ActivationFunctionType FusedActivationFunction;
+
+        public MulOptions(ActivationFunctionType fused_activation_function = ActivationFunctionType.NONE)
+        {
+            this.FusedActivationFunction = fused_activation_function;
+        }
+
+        public int GetValue(FlatBufferBuilder fbb)
+        {
+            return tflite.MulOptions.CreateMulOptions(fbb, this.FusedActivationFunction).Value;
+        }
+    }
+
+    class DivOptions : IBuiltinOptions
+    {
+        public BuiltinOptions Type => BuiltinOptions.DivOptions;
+        public ActivationFunctionType FusedActivationFunction;
+
+        public DivOptions(ActivationFunctionType fused_activation_function = ActivationFunctionType.NONE)
+        {
+            this.FusedActivationFunction = fused_activation_function;
+        }
+
+        public int GetValue(FlatBufferBuilder fbb)
+        {
+            return tflite.DivOptions.CreateDivOptions(fbb, this.FusedActivationFunction).Value;
         }
     }
 
@@ -277,7 +329,6 @@ namespace Schema
         public int[] Inputs;
         public int[] Outputs;
 
-        public BuiltinOptions BuiltinOptionType;
         public sbyte[] CustomOptions;
         public CustomOptionsFormat CustomOptionsFormat;
 
@@ -298,14 +349,13 @@ namespace Schema
         private int[] Intermediates;
 
         //本家にはない項目
-        private IBuiltInOptions BuiltinOption;
+        private IBuiltinOptions BuiltinOption;
 
         public Operator(
             uint opcode_index = 0,
             int[] inputs = null,
             int[] outputs = null,
-            BuiltinOptions builtin_options_type = BuiltinOptions.NONE,
-            IBuiltInOptions builtin_options = null,
+            IBuiltinOptions builtin_options = null,
             sbyte[] custom_options = null,
             CustomOptionsFormat custom_options_format = CustomOptionsFormat.FLEXBUFFERS,
             bool[] mutating_variable_inputs = null,
@@ -314,7 +364,6 @@ namespace Schema
             this.OpecodeIndex = opcode_index;
             this.Inputs = inputs;
             this.Outputs = outputs;
-            this.BuiltinOptionType = builtin_options_type;
             this.BuiltinOption = builtin_options;
             this.CustomOptions = custom_options;
             this.CustomOptionsFormat = custom_options_format;
@@ -337,7 +386,7 @@ namespace Schema
             tflite.Operator.AddOpcodeIndex(fbb, this.OpecodeIndex);
             tflite.Operator.AddInputs(fbb, operatorInputsOffsetVector);
             tflite.Operator.AddOutputs(fbb, operatorOutputsOffsetVector);
-            tflite.Operator.AddBuiltinOptionsType(fbb, this.BuiltinOptionType);
+            tflite.Operator.AddBuiltinOptionsType(fbb, this.BuiltinOption.Type);
             tflite.Operator.AddBuiltinOptions(fbb, builtinOptionValue);
             tflite.Operator.AddCustomOptionsFormat(fbb, this.CustomOptionsFormat);
             return tflite.Operator.EndOperator(fbb);

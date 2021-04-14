@@ -35,24 +35,24 @@ namespace TensorFlowLiteNet
         {
             TensorType tensorType = GetTensorType();
 
-            InputsTensorIndex = new[] { 0 };//PlusConstは右辺が定数なので左辺のみ
+            InputsTensorIndex = new[] { 0 }; //PlusConstは右辺が定数なので左辺のみ
             inputArrays = new[] { inputVar };
 
             tensorsOffset.Add(new Schema.Tensor(inputVar.Shape, tensorType, (uint)schemaModel.Buffers.Count, schemaModel.Buffers.Count + ":" + inputVar.Name));
             schemaModel.Buffers.Add(new Schema.Buffer());
 
             outputArrays = new[] { new Variable<T>(inputVar.Shape) };
-            OutputsTensorIndex = new[] { 0 };//特に計算は行わないので自分自身を返す
+            OutputsTensorIndex = new[] { 0 }; //特に計算は行わないので自分自身を返す
         }
 
-        private void AddPlusConstOperator(Array input)
+        private void AddConstOperator(Array input, BuiltinOperator builtinOperator, Schema.IBuiltinOptions builtinOption)
         {
             List<int> inputs = new List<int>();
 
-            if (!OperatorDict.ContainsKey(BuiltinOperator.ADD))
+            if (!OperatorDict.ContainsKey(builtinOperator))
             {
-                OperatorDict.Add(BuiltinOperator.ADD, (uint)operatorsOffset.Count);
-                schemaModel.OperatorCodes.Add(new Schema.OperatorCode(0, version: 1, builtin_code: BuiltinOperator.ADD));
+                OperatorDict.Add(builtinOperator, (uint)operatorsOffset.Count);
+                schemaModel.OperatorCodes.Add(new Schema.OperatorCode(0, version: 1, builtin_code: builtinOperator));
             }
 
             TensorType tensorType = GetTensorType();
@@ -83,11 +83,8 @@ namespace TensorFlowLiteNet
 
             OutputsTensorIndex = outputs;
 
-            //事前に用意しないとエラーが出る
-            Schema.AddOptions builtinOption = new Schema.AddOptions(ActivationFunctionType.NONE, true);
-
             //opの追加時はTensorのIndex
-            operatorsOffset.Add(new Schema.Operator(OperatorDict[BuiltinOperator.ADD], inputs.ToArray(), outputs, BuiltinOptions.AddOptions, builtinOption));
+            operatorsOffset.Add(new Schema.Operator(OperatorDict[builtinOperator], inputs.ToArray(), outputs, builtinOption));
         }
 
         public void Save(string path)
@@ -104,6 +101,16 @@ namespace TensorFlowLiteNet
                     bw.Write(modelData);
                 }
             }
+        }
+
+        public Variable<T>[] Predict(params Array[] arrays)
+        {
+            for (int i = 0; i < arrays.Length; i++)
+            {
+                inputArrays[i].SetVal(arrays[i]);
+            }
+
+            return Run();
         }
 
         public Variable<T>[] Run()
@@ -171,7 +178,33 @@ namespace TensorFlowLiteNet
 
         public static Graph<T> operator +(Graph<T> a, Array b)
         {
-            a.AddPlusConstOperator(b);
+            Schema.AddOptions builtinOption = new Schema.AddOptions(ActivationFunctionType.NONE, true);
+
+            a.AddConstOperator(b, BuiltinOperator.ADD, builtinOption);
+            return a;
+        }
+
+        public static Graph<T> operator -(Graph<T> a, Array b)
+        {
+            Schema.SubOptions builtinOption = new Schema.SubOptions(ActivationFunctionType.NONE, true);
+
+            a.AddConstOperator(b, BuiltinOperator.SUB, builtinOption);
+            return a;
+        }
+
+        public static Graph<T> operator *(Graph<T> a, Array b)
+        {
+            Schema.MulOptions builtinOption = new Schema.MulOptions(ActivationFunctionType.NONE);
+
+            a.AddConstOperator(b, BuiltinOperator.MUL, builtinOption);
+            return a;
+        }
+
+        public static Graph<T> operator /(Graph<T> a, Array b)
+        {
+            Schema.DivOptions builtinOption = new Schema.DivOptions(ActivationFunctionType.NONE);
+
+            a.AddConstOperator(b, BuiltinOperator.DIV, builtinOption);
             return a;
         }
     }
